@@ -26,9 +26,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ==========================================
-# ROTA DE LOGIN (TEXTO SIMPLES)
-# ==========================================
+
 @app.post("/login")
 def realizar_login(dados: dict):
     perfil = dados.get("perfil")
@@ -65,9 +63,7 @@ def realizar_login(dados: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ==========================================
-# ROTAS EXCLUSIVAS DO PAINEL DO MÉDICO
-# ==========================================
+
 @app.get("/agenda_medico/{crm:path}")
 def get_agenda_medico(crm: str):
     try:
@@ -108,9 +104,6 @@ def atualizar_evolucao(id_cirurgia: int, dados: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ==========================================
-# ROTA DE AGENDAMENTO (COM BLOQUEIO DE CHOQUE - EM HORAS)
-# ==========================================
 @app.post("/add_cirurgia")
 def criar_cirurgia(dados: dict):
     try:
@@ -128,6 +121,7 @@ def criar_cirurgia(dados: dict):
         nova_inicio = datetime.fromisoformat(data_hora_str.replace('Z', ''))
         nova_fim = nova_inicio + timedelta(hours=duracao_estimada) 
 
+        # --- Validação de choque de horários na Sala ---
         busca_sala = supabase.table("cirurgia").select("id_cirurgia, data_hora, duracao_estimada, status").eq("id_sala", id_sala).execute()
         
         for c in busca_sala.data:
@@ -138,6 +132,7 @@ def criar_cirurgia(dados: dict):
                 if nova_inicio < existente_fim and nova_fim > existente_inicio:
                     raise HTTPException(status_code=400, detail="Bloqueio: Já existe uma cirurgia agendada para esta sala neste horário.")
 
+        # --- Validação de choque de horários do Médico ---
         if crm_medico:
             busca_medico = supabase.table("equipe_cirurgica").select("id_cirurgia, cirurgia(data_hora, duracao_estimada, status)").eq("crm_medico", crm_medico).execute()
             for registro in busca_medico.data:
@@ -149,6 +144,7 @@ def criar_cirurgia(dados: dict):
                     if nova_inicio < existente_fim and nova_fim > existente_inicio:
                         raise HTTPException(status_code=400, detail="Bloqueio: O médico já possui outra cirurgia neste horário.")
 
+        # --- Inserção da Cirurgia ---
         payload_cirurgia = {
             "cpf_paciente": cpf_paciente,
             "id_sala": id_sala,
@@ -166,6 +162,7 @@ def criar_cirurgia(dados: dict):
             
         id_cirurgia = resposta_cirurgia.data[0]["id_cirurgia"]
 
+        # --- Inserção do Médico ---
         if crm_medico:
             supabase.table("equipe_cirurgica").insert({
                 "id_cirurgia": id_cirurgia,
@@ -173,7 +170,36 @@ def criar_cirurgia(dados: dict):
                 "funcao": "Cirurgião Principal"
             }).execute()
 
+        # --- ATUALIZAÇÃO E VÍNCULO DOS EQUIPAMENTOS ---
         if equipamentos:
+            for eq_id in equipamentos:
+                # 1. Busca o equipamento atual para verificar as quantidades
+                busca_eq = supabase.table("equipamentos").select("nome, quantidade_total, quantidade_disponivel, quantidade_em_uso").eq("id", int(eq_id)).execute()
+                
+                if not busca_eq.data:
+                    raise HTTPException(status_code=44, detail=f"Equipamento ID {eq_id} não encontrado.")
+                
+                eq_atual = busca_eq.data[0]
+                disp = eq_atual["quantidade_disponivel"]
+                maximo = eq_atual["quantidade_total"]
+                em_uso = eq_atual["quantidade_em_uso"]
+                nome_eq = eq_atual["nome"]
+                
+                # 2. Aplica as regras solicitadas por você
+                if disp > 0 and disp <= maximo:
+                    # Incrementa o uso e decrementa o disponível
+                    supabase.table("equipamentos").update({
+                        "quantidade_em_uso": em_uso + 1,
+                        "quantidade_disponivel": disp - 1
+                    }).eq("id", int(eq_id)).execute()
+                else:
+                    # Se falhar na regra de negócio, avisa o Front-end
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"Não há unidades disponíveis para o equipamento: {nome_eq} (Disponíveis: {disp})"
+                    )
+
+            # 3. Faz o vínculo na tabela intermediária cirurgia_equipamento
             payload_equipamentos = [{"id_cirurgia": id_cirurgia, "id_equipamento": int(eq_id)} for eq_id in equipamentos]
             supabase.table("cirurgia_equipamento").insert(payload_equipamentos).execute()
 
@@ -183,7 +209,8 @@ def criar_cirurgia(dados: dict):
         raise http_err
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-        
+    
+    
 @app.get("/pacientes")
 def get_all_pacientes():
     try:
