@@ -100,7 +100,7 @@ export default function Login() {
           </div>
 
           <button type="submit" disabled={carregando} className="w-full py-3 bg-gradient-to-r from-[#03A688] to-[#00ECA9] text-white rounded-lg font-bold shadow-lg hover:opacity-95 disabled:opacity-50">
-            {carregando ? "A Autenticar..." : "Aceder ao Sistema"}
+            {carregando ? "Autenticando ..." : "Entrar"}
           </button>
         </form>
       </div>
