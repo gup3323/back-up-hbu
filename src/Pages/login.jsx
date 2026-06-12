@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Stethoscope, UserCheck, Lock, Mail } from "lucide-react";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 export default function Login() {
   const navigate = useNavigate();
   const [perfil, setPerfil] = useState("funcionario");
@@ -15,7 +17,7 @@ export default function Login() {
 
     setCarregando(true);
     try {
-      const response = await fetch("http://localhost:8000/login", {
+      const response = await fetch(`${API_BASE_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ perfil, email, senha }) 

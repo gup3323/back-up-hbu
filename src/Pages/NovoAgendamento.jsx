@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, Calendar, Wrench, UserPlus, Trash2 } from "lucide-react";
 import Layout from "../layouts/Layout";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function NovoAgendamento() {
   const navigate = useNavigate();

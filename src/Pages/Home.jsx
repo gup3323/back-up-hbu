@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Calendar, ClipboardList, Activity, Users } from "lucide-react";
 import Layout from "../layouts/Layout";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function Home() {
   const [resumo, setResumo] = useState({

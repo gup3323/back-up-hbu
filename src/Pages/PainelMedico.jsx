@@ -160,8 +160,8 @@ export default function PainelMedico() {
                   if (cirurgia.data_hora && cirurgia.data_hora.includes("T")) {
                     const [dataPart, horaPart] = cirurgia.data_hora.split("T");
                     const [ano, mes, dia] = dataPart.split("-");
-                    dataExibicao = `${dia}/${mes}`; // Ex: 01/06
-                    horaExibicao = horaPart.substring(0, 5); // Ex: 08:00
+                    dataExibicao = `${dia}/${mes}/${ano}`;
+                    horaExibicao = horaPart.substring(0, 5);
                   }
 
                   return (

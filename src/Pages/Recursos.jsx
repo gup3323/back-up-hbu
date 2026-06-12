@@ -2,7 +2,7 @@ import Layout from "../layouts/Layout";
 import React, { useState, useEffect } from "react";
 import { Building2, Users, Wrench, Activity } from "lucide-react";
 
-const API_BASE_URL = "http://127.0.0.1:8000"; 
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function Recursos() {
   const [salas, setSalas] = useState([]);
